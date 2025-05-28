@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>IA Runner - Feira Cultural</title>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap" rel="stylesheet" />
   <style>
     body {
       margin: 0;
@@ -117,7 +117,7 @@
   <ol id="ranking"></ol>
 </div>
 
-<!-- Sons (certifique-se que estão em /sounds) -->
+<!-- Sons (confirme que os arquivos estão na pasta sounds corretamente) -->
 <audio id="jump-sound" src="sounds/jump.mp3"></audio>
 <audio id="hit-sound" src="sounds/hit.mp3"></audio>
 <audio id="bg-music" src="sounds/music.mp3" loop></audio>
@@ -138,9 +138,11 @@
   let isGameOver = false;
   let playerY = 360;
   let aiMode = false;
+  let obstacleInterval;
+  let scoreTimeout;
 
   document.addEventListener('keydown', (e) => {
-    if (!aiMode && e.code === 'Space' && !jumping) {
+    if (!aiMode && e.code === 'Space' && !jumping && !isGameOver) {
       velocityY = -15;
       jumping = true;
       jumpSound.play();
@@ -149,15 +151,28 @@
 
   function startGame(isAI) {
     aiMode = isAI;
+    isGameOver = false;
+    score = 0;
+    playerY = 360;
+    velocityY = 0;
+    jumping = false;
+
     document.getElementById('menu').style.display = 'none';
     game.style.display = 'block';
     scoreDisplay.style.display = 'block';
+    scoreDisplay.innerText = 'Pontos: 0';
     showRanking();
+
+    // Remove obstáculos antigos se houver
+    document.querySelectorAll('.obstacle').forEach(o => o.remove());
+
+    // Inicia criação de obstáculos e pontuação
     createObstacle();
     updateScore();
     gameLoop();
 
-    // Tocar música só após interação (evita bloqueio do navegador)
+    // Reinicia música e toca após interação
+    bgMusic.pause();
     bgMusic.currentTime = 0;
     bgMusic.volume = 0.3;
     bgMusic.play().catch(err => {
@@ -236,7 +251,7 @@
     if (isGameOver) return;
     score++;
     scoreDisplay.innerText = `Pontos: ${score}`;
-    setTimeout(updateScore, 200);
+    scoreTimeout = setTimeout(updateScore, 200);
   }
 
   function gameLoop() {
@@ -247,10 +262,16 @@
 
   function endGame() {
     isGameOver = true;
+    clearTimeout(scoreTimeout);
     bgMusic.pause();
     alert(`Game Over! Pontos: ${score}`);
     saveScore();
     showRanking();
+
+    // Volta para menu após fim do jogo
+    document.getElementById('menu').style.display = 'block';
+    game.style.display = 'none';
+    scoreDisplay.style.display = 'none';
   }
 
   function saveScore() {
