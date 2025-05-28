@@ -2,50 +2,111 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>IA Runner - Jogo Infinito</title>
+  <title>IA Runner - Feira Cultural</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap" rel="stylesheet">
   <style>
     body {
       margin: 0;
-      font-family: Arial, sans-serif;
-      background: black;
-      color: white;
+      font-family: 'Orbitron', sans-serif;
+      background: linear-gradient(135deg, #1a0033, #2e0066);
+      color: #fff;
       overflow: hidden;
     }
+
     #game {
       position: relative;
       width: 800px;
       height: 400px;
       margin: 20px auto;
-      background: #111;
-      border: 2px solid #0f0;
+      background: rgba(0, 0, 0, 0.4);
+      border: 3px solid #9d4edd;
+      box-shadow: 0 0 20px #9d4edd;
+      overflow: hidden;
+      display: none;
     }
+
     #player {
       position: absolute;
       width: 40px;
       height: 40px;
-      background: lime;
+      background: #c77dff;
+      box-shadow: 0 0 10px #c77dff;
       left: 50px;
       top: 360px;
+      border-radius: 5px;
     }
+
     .obstacle {
       position: absolute;
       width: 30px;
       height: 50px;
-      background: red;
+      background: #ff4dff;
       bottom: 0;
+      box-shadow: 0 0 10px #ff4dff;
+      border-radius: 4px;
     }
+
     #score {
       text-align: center;
-      font-size: 24px;
-      margin-top: 10px;
+      font-size: 28px;
+      margin-top: 20px;
+      color: #e0aaff;
+      text-shadow: 0 0 5px #c77dff;
+      display: none;
     }
+
     #rank {
       text-align: center;
       margin-top: 20px;
+      color: #e0aaff;
+    }
+
+    #ranking {
+      list-style: none;
+      padding: 0;
+      color: #e0aaff;
+    }
+
+    #ranking li {
+      margin: 5px 0;
+      font-size: 18px;
+    }
+
+    h3 {
+      margin-bottom: 10px;
+      color: #c77dff;
+      text-shadow: 0 0 5px #c77dff;
+    }
+
+    #menu {
+      text-align: center;
+      margin-top: 80px;
+    }
+
+    .btn {
+      background: #9d4edd;
+      border: none;
+      padding: 15px 30px;
+      color: white;
+      font-size: 18px;
+      margin: 10px;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: 0.3s;
+    }
+
+    .btn:hover {
+      background: #7b2cbf;
     }
   </style>
 </head>
 <body>
+
+<div id="menu">
+  <h1>IA Runner</h1>
+  <button class="btn" onclick="startGame(false)">Jogar como Humano</button>
+  <button class="btn" onclick="startGame(true)">Assistir IA Jogando</button>
+</div>
 
 <div id="score">Pontos: 0</div>
 <div id="game">
@@ -56,11 +117,19 @@
   <ol id="ranking"></ol>
 </div>
 
+<!-- Sons (certifique-se que estão em /sounds) -->
+<audio id="jump-sound" src="sounds/jump.mp3"></audio>
+<audio id="hit-sound" src="sounds/hit.mp3"></audio>
+<audio id="bg-music" src="sounds/music.mp3" loop></audio>
+
 <script>
   const game = document.getElementById('game');
   const player = document.getElementById('player');
   const scoreDisplay = document.getElementById('score');
   const rankingList = document.getElementById('ranking');
+  const jumpSound = document.getElementById('jump-sound');
+  const hitSound = document.getElementById('hit-sound');
+  const bgMusic = document.getElementById('bg-music');
 
   let jumping = false;
   let velocityY = 0;
@@ -68,15 +137,48 @@
   let score = 0;
   let isGameOver = false;
   let playerY = 360;
+  let aiMode = false;
 
   document.addEventListener('keydown', (e) => {
-    if (e.code === 'Space' && !jumping) {
+    if (!aiMode && e.code === 'Space' && !jumping) {
       velocityY = -15;
       jumping = true;
+      jumpSound.play();
     }
   });
 
+  function startGame(isAI) {
+    aiMode = isAI;
+    document.getElementById('menu').style.display = 'none';
+    game.style.display = 'block';
+    scoreDisplay.style.display = 'block';
+    showRanking();
+    createObstacle();
+    updateScore();
+    gameLoop();
+
+    // Tocar música só após interação (evita bloqueio do navegador)
+    bgMusic.currentTime = 0;
+    bgMusic.volume = 0.3;
+    bgMusic.play().catch(err => {
+      console.warn("O navegador bloqueou o áudio automático:", err);
+    });
+  }
+
   function updatePlayer() {
+    if (aiMode && !jumping) {
+      const obstacle = document.querySelector('.obstacle');
+      if (obstacle) {
+        const obstacleLeft = obstacle.getBoundingClientRect().left;
+        const playerRight = player.getBoundingClientRect().right;
+        if (obstacleLeft - playerRight < 60) {
+          velocityY = -15;
+          jumping = true;
+          jumpSound.play();
+        }
+      }
+    }
+
     velocityY += gravity;
     playerY += velocityY;
 
@@ -117,6 +219,7 @@
         playerRect.bottom > obstacleRect.top
       ) {
         clearInterval(move);
+        hitSound.play();
         endGame();
       }
 
@@ -144,32 +247,29 @@
 
   function endGame() {
     isGameOver = true;
+    bgMusic.pause();
     alert(`Game Over! Pontos: ${score}`);
     saveScore();
     showRanking();
   }
 
   function saveScore() {
-    let nome = prompt("Digite seu nome:");
-    if (!nome) nome = "Jogador";
+    if (!aiMode) {
+      let nome = prompt("Digite seu nome:");
+      if (!nome) nome = "Jogador";
 
-    let ranking = JSON.parse(localStorage.getItem('ranking')) || [];
-    ranking.push({ nome, pontos: score });
-    ranking.sort((a, b) => b.pontos - a.pontos);
-    ranking = ranking.slice(0, 5);
-    localStorage.setItem('ranking', JSON.stringify(ranking));
+      let ranking = JSON.parse(localStorage.getItem('ranking')) || [];
+      ranking.push({ nome, pontos: score });
+      ranking.sort((a, b) => b.pontos - a.pontos);
+      ranking = ranking.slice(0, 5);
+      localStorage.setItem('ranking', JSON.stringify(ranking));
+    }
   }
 
   function showRanking() {
     const ranking = JSON.parse(localStorage.getItem('ranking')) || [];
     rankingList.innerHTML = ranking.map(p => `<li>${p.nome}: ${p.pontos}</li>`).join('');
   }
-
-  // Início do jogo
-  showRanking();
-  createObstacle();
-  updateScore();
-  gameLoop();
 </script>
 
 </body>
