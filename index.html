@@ -24,7 +24,7 @@
       width: 40px;
       height: 40px;
       background: lime;
-      bottom: 0;
+      top: 360px; /* posição inicial */
       left: 50px;
     }
     .obstacle {
@@ -70,7 +70,7 @@
   let isGameOver = false;
 
   // Posiciona o player
-  player.style.bottom = '0px';
+  player.style.top = '360px';
 
   document.addEventListener('keydown', (e) => {
     if (e.code === 'Space' && !jumping) {
@@ -81,15 +81,15 @@
 
   function updatePlayer() {
     if (jumping) {
-      let currentBottom = parseInt(player.style.bottom);
+      let currentTop = parseInt(player.style.top);
       velocityY -= gravity;
-      currentBottom += velocityY;
-      if (currentBottom <= 0) {
-        currentBottom = 0;
+      currentTop -= velocityY;
+      if (currentTop >= 360) {
+        currentTop = 360;
         jumping = false;
         velocityY = 0;
       }
-      player.style.bottom = currentBottom + 'px';
+      player.style.top = currentTop + 'px';
     }
   }
 
