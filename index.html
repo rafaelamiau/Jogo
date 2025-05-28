@@ -24,8 +24,8 @@
       width: 40px;
       height: 40px;
       background: lime;
-      top: 360px; /* posição inicial */
       left: 50px;
+      top: 360px;
     }
     .obstacle {
       position: absolute;
@@ -33,7 +33,6 @@
       height: 50px;
       background: red;
       bottom: 0;
-      right: 0;
     }
     #score {
       text-align: center;
@@ -68,29 +67,26 @@
   const gravity = 1;
   let score = 0;
   let isGameOver = false;
-
-  // Posiciona o player
-  player.style.top = '360px';
+  let playerY = 360;
 
   document.addEventListener('keydown', (e) => {
     if (e.code === 'Space' && !jumping) {
-      velocityY = 15;
+      velocityY = -15;
       jumping = true;
     }
   });
 
   function updatePlayer() {
-    if (jumping) {
-      let currentTop = parseInt(player.style.top);
-      velocityY -= gravity;
-      currentTop -= velocityY;
-      if (currentTop >= 360) {
-        currentTop = 360;
-        jumping = false;
-        velocityY = 0;
-      }
-      player.style.top = currentTop + 'px';
+    velocityY += gravity;
+    playerY += velocityY;
+
+    if (playerY >= 360) {
+      playerY = 360;
+      velocityY = 0;
+      jumping = false;
     }
+
+    player.style.top = playerY + 'px';
   }
 
   function createObstacle() {
@@ -98,7 +94,7 @@
 
     const obstacle = document.createElement('div');
     obstacle.classList.add('obstacle');
-    obstacle.style.right = '-30px';
+    obstacle.style.left = '800px';
     game.appendChild(obstacle);
 
     let pos = 800;
@@ -110,12 +106,11 @@
       }
 
       pos -= 5;
-      obstacle.style.right = pos + 'px';
+      obstacle.style.left = pos + 'px';
 
       const playerRect = player.getBoundingClientRect();
       const obstacleRect = obstacle.getBoundingClientRect();
 
-      // Verifica colisão
       if (
         playerRect.right > obstacleRect.left &&
         playerRect.left < obstacleRect.right &&
@@ -131,14 +126,13 @@
       }
     }, 20);
 
-    // Próximo obstáculo
     setTimeout(createObstacle, Math.random() * 1500 + 1000);
   }
 
   function updateScore() {
     if (isGameOver) return;
     score++;
-    scoreDisplay.innerText = Pontos: ${score};
+    scoreDisplay.innerText = `Pontos: ${score}`;
     setTimeout(updateScore, 200);
   }
 
@@ -150,7 +144,7 @@
 
   function endGame() {
     isGameOver = true;
-    alert(Game Over! Pontos: ${score});
+    alert(`Game Over! Pontos: ${score}`);
     saveScore();
     showRanking();
   }
@@ -168,7 +162,7 @@
 
   function showRanking() {
     const ranking = JSON.parse(localStorage.getItem('ranking')) || [];
-    rankingList.innerHTML = ranking.map(p => <li>${p.nome}: ${p.pontos}</li>).join('');
+    rankingList.innerHTML = ranking.map(p => `<li>${p.nome}: ${p.pontos}</li>`).join('');
   }
 
   // Início do jogo
