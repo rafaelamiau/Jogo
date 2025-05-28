@@ -2,11 +2,11 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Jogo Infinito - IA Runner</title>
+  <title>IA Runner - Jogo Infinito</title>
   <style>
     body {
       margin: 0;
-      font-family: Arial;
+      font-family: Arial, sans-serif;
       background: black;
       color: white;
       overflow: hidden;
@@ -16,27 +16,29 @@
       width: 800px;
       height: 400px;
       margin: 20px auto;
-      background: linear-gradient(#111, #222);
+      background: #111;
       border: 2px solid #0f0;
     }
     #player {
       position: absolute;
-      bottom: 0;
-      left: 50px;
       width: 40px;
       height: 40px;
       background: lime;
+      bottom: 0;
+      left: 50px;
     }
     .obstacle {
       position: absolute;
-      bottom: 0;
       width: 30px;
       height: 50px;
       background: red;
+      bottom: 0;
+      right: 0;
     }
     #score {
       text-align: center;
       font-size: 24px;
+      margin-top: 10px;
     }
     #rank {
       text-align: center;
@@ -51,102 +53,116 @@
   <div id="player"></div>
 </div>
 <div id="rank">
-  <h3>Ranking de Pontuação</h3>
+  <h3>Ranking</h3>
   <ol id="ranking"></ol>
 </div>
 
 <script>
   const game = document.getElementById('game');
   const player = document.getElementById('player');
-  const scoreText = document.getElementById('score');
+  const scoreDisplay = document.getElementById('score');
   const rankingList = document.getElementById('ranking');
-  let isJumping = false;
-  let gravity = 2;
-  let velocity = 0;
-  let isGameOver = false;
+
+  let jumping = false;
+  let velocityY = 0;
+  const gravity = 1;
   let score = 0;
+  let isGameOver = false;
 
-  function jump() {
-    if (!isJumping) {
-      isJumping = true;
-      velocity = -20;
-    }
-  }
+  // Posiciona o player
+  player.style.bottom = '0px';
 
-  document.addEventListener('keydown', e => {
-    if (e.code === 'Space') {
-      jump();
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && !jumping) {
+      velocityY = 15;
+      jumping = true;
     }
   });
 
+  function updatePlayer() {
+    if (jumping) {
+      let currentBottom = parseInt(player.style.bottom);
+      velocityY -= gravity;
+      currentBottom += velocityY;
+      if (currentBottom <= 0) {
+        currentBottom = 0;
+        jumping = false;
+        velocityY = 0;
+      }
+      player.style.bottom = currentBottom + 'px';
+    }
+  }
+
   function createObstacle() {
     if (isGameOver) return;
+
     const obstacle = document.createElement('div');
     obstacle.classList.add('obstacle');
-    obstacle.style.left = '800px';
+    obstacle.style.right = '-30px';
     game.appendChild(obstacle);
 
-    let moveInterval = setInterval(() => {
+    let pos = 800;
+
+    const move = setInterval(() => {
       if (isGameOver) {
-        clearInterval(moveInterval);
-        obstacle.remove();
+        clearInterval(move);
         return;
       }
 
-      const obstacleLeft = parseInt(window.getComputedStyle(obstacle).left);
-      obstacle.style.left = (obstacleLeft - 5) + 'px';
+      pos -= 5;
+      obstacle.style.right = pos + 'px';
 
-      const playerTop = parseInt(window.getComputedStyle(player).top || 0);
-      const playerBottom = 400 - playerTop - 40;
+      const playerRect = player.getBoundingClientRect();
+      const obstacleRect = obstacle.getBoundingClientRect();
+
+      // Verifica colisão
       if (
-        obstacleLeft > 50 && obstacleLeft < 90 &&
-        playerBottom < 50
+        playerRect.right > obstacleRect.left &&
+        playerRect.left < obstacleRect.right &&
+        playerRect.bottom > obstacleRect.top
       ) {
-        gameOver();
+        clearInterval(move);
+        endGame();
       }
 
-      if (obstacleLeft <= 0) {
+      if (pos < -30) {
+        clearInterval(move);
         obstacle.remove();
       }
     }, 20);
 
-    setTimeout(createObstacle, Math.random() * 2000 + 1000);
+    // Próximo obstáculo
+    setTimeout(createObstacle, Math.random() * 1500 + 1000);
+  }
+
+  function updateScore() {
+    if (isGameOver) return;
+    score++;
+    scoreDisplay.innerText = Pontos: ${score};
+    setTimeout(updateScore, 200);
   }
 
   function gameLoop() {
     if (isGameOver) return;
-
-    // Simula gravidade
-    const playerTop = parseInt(window.getComputedStyle(player).top) || 0;
-    velocity += gravity;
-    let newTop = playerTop + velocity;
-    if (newTop > 360) {
-      newTop = 360;
-      isJumping = false;
-      velocity = 0;
-    }
-    player.style.top = newTop + 'px';
-
-    // Aumenta pontos
-    score++;
-    scoreText.innerText = Pontos: ${score};
-
+    updatePlayer();
     requestAnimationFrame(gameLoop);
   }
 
-  function gameOver() {
+  function endGame() {
     isGameOver = true;
-    alert('Game Over! Pontuação: ' + score);
-    saveScore(score);
+    alert(Game Over! Pontos: ${score});
+    saveScore();
     showRanking();
   }
 
-  function saveScore(pontos) {
+  function saveScore() {
+    let nome = prompt("Digite seu nome:");
+    if (!nome) nome = "Jogador";
+
     let ranking = JSON.parse(localStorage.getItem('ranking')) || [];
-    const nome = prompt("Digite seu nome:");
-    ranking.push({ nome, pontos });
+    ranking.push({ nome, pontos: score });
     ranking.sort((a, b) => b.pontos - a.pontos);
-    ranking = ranking.slice(0, 5); // Top 5
+    ranking = ranking.slice(0, 5);
     localStorage.setItem('ranking', JSON.stringify(ranking));
   }
 
@@ -155,10 +171,10 @@
     rankingList.innerHTML = ranking.map(p => <li>${p.nome}: ${p.pontos}</li>).join('');
   }
 
-  // Iniciar
-  player.style.top = '360px';
+  // Início do jogo
   showRanking();
   createObstacle();
+  updateScore();
   gameLoop();
 </script>
 
